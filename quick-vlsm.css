@@ -1,0 +1,339 @@
+/*MAIN STYLESHEET FOR THE QUICK-VLSM CALCULATOR PAGE. CHANGE TO FIT THE STYLE OF YOUR WEB SITE*/
+
+body { /*PAGE DEFAULTS*/
+   font-family: Verdana, Geneva, sans-serif;
+}
+
+#main_content_container { /*MAIN CONTAINER DIV WHICH CONTAINS EVERYTHING ON THE PAGE*/
+	width: 90%;
+	margin: 0px auto 0px auto;
+	text-align: center;
+	position: relative;
+}
+
+
+#header_hr { /*THIS IS THE HORIZONTAL LINE THAT APPEARS UNDER THE HEADER IMAGE*/
+	width: 65%;
+	height: 3px;
+	border: none;
+	background-color: #B8C1D8; /*COLOR OF THE LINE*/
+	margin: 25px auto 35px auto;
+}
+
+.step_label { /*THE TEXT THAT LABELS A STEP. EXAMPLE: "Step 1:"*/
+	font-family: Verdana, Geneva, sans-serif;
+	font-size: 16px;
+	font-weight: bold;
+	color: #DE0E03;
+}
+
+.step_text { /*THE ACTUAL TEXT DESCRIBING A STEP*/
+	font-family: Verdana, Geneva, sans-serif;
+	font-size: 16px;
+	color: #050BD1;
+}
+
+.box_style_good { /*STYLES A TEXT BOX THAT HAS BEEN VALIDATED AS GOOD, NO ERRORS*/
+	border: 3px solid #27BE16;
+	background-color: #E1FFD7;
+	color: #005128;
+}
+
+.box_style_error { /*STYLES A TEXT BOX THAT HAS BEEN VALIDATED AS BAD, CONTAINING ERRORS*/
+	border: 3px solid #FF0000;
+	background-color: #FFE6E6;
+	color: #660000;
+}
+
+#cidr { /*STYLES THE TEXT BOX THAT THE IP ADDRESS/MASK IS ENTERED IN*/
+	width: 260px;
+	height: 50px;
+	font-family: Verdana, Geneva, sans-serif;
+	font-size: 20px;
+	font-weight: bold;
+	text-align: center;
+}
+
+#cidr_info { /*STYLES THE BOX THAT DISPLAYS THE ADDRESS BLOCK INFORMATION*/
+	opacity: 0; /*HIDE BY DEFAULT*/
+	width: 500px;
+	height: 0px; /*STARTS THE DIV OUT COLLAPSED FOR THE ANIMATION. TO CHANGE THE HEIGHT OF THE INFORMATION BLOCK SEE THE LINE "$cidrDisplayBox.animate({ opacity: 1, height: "100px" }, 1200);" IN THE "updateCIDR" FUNCTION IN index.html*/
+    margin: 30px auto 30px auto;
+	border: solid 2px #BFFFDF;
+	color: #FFFFFF;
+	padding: 15px 0px;
+	background: #00661A; /* Old browsers */
+	/* IE9 SVG, needs conditional override of 'filter' to 'none' */
+	background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pgo8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDEgMSIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJncmFkLXVjZ2ctZ2VuZXJhdGVkIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIwJSIgeTI9IjEwMCUiPgogICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzAwOTkzNSIgc3RvcC1vcGFjaXR5PSIxIi8+CiAgICA8c3RvcCBvZmZzZXQ9Ijk5JSIgc3RvcC1jb2xvcj0iIzAzM2YwZCIgc3RvcC1vcGFjaXR5PSIxIi8+CiAgPC9saW5lYXJHcmFkaWVudD4KICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSJ1cmwoI2dyYWQtdWNnZy1nZW5lcmF0ZWQpIiAvPgo8L3N2Zz4=);
+	background: -moz-linear-gradient(top,  #009935 0%, #033f0d 99%); /* FF3.6+ */
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#009935), color-stop(99%,#033f0d)); /* Chrome,Safari4+ */
+	background: -webkit-linear-gradient(top,  #009935 0%,#033f0d 99%); /* Chrome10+,Safari5.1+ */
+	background: -o-linear-gradient(top,  #009935 0%,#033f0d 99%); /* Opera 11.10+ */
+	background: -ms-linear-gradient(top,  #009935 0%,#033f0d 99%); /* IE10+ */
+	background: linear-gradient(to bottom,  #009935 0%,#033f0d 99%); /* W3C */
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#009935', endColorstr='#033f0d',GradientType=0 ); /* IE6-8 */
+}
+
+#cidr_info_header { /*STYLES ENTIRE HEADER IN THE ADDRESS BLOCK INFORMATION BLOCK*/
+    font-weight: bold;
+}
+
+#cidr_info_header_block { /*STYLES JUST THE IP ADDRESS/MASK IN THE ADDRESS BLOCK INFORMATION BLOCK*/
+    color: #FFFF99;
+}
+
+#cidr_info_ul { /*STYLES THE LIST OF INFO IN THE ADDRESS BLOCK INFORMATION BLOCK*/
+    font-size: 14px;
+    width: 375px;
+    text-align: left;
+    margin-left: 70px;
+}
+
+#cidr_info_ul .list_title { /*STYLES EACH TITLE OF THE EACH LIST ITEM IN THE ADDRESS BLOCK INFORMATION BLOCK*/
+    font-weight: bold;
+    color: #FFFF99;
+}
+
+
+
+#networks { /*STYLES THE BOX THAT DISPLAYS THE ADDED NETWORKS*/
+	opacity: 0; /*HIDE BY DEFAULT*/
+	width: 500px;
+	height: 0px; /*DON'T MESS WITH THE HEIGHT OF THIS DIV AS IT IS CONTROLLED AUTOMATICALLY VIA THE JAVASCRIPT*/
+    margin: 30px auto 30px auto;
+	border: solid 2px #CCCCCC;
+    background-color: #EEEEEE;
+	color: #FFFFFF;
+	padding: 0px 0px 20px 0px;
+}
+
+#networks_header { /*STYLES THE HEADER THAT SAYS "NETWORKS" IN THE NETWORKS INFORMATION BOX*/
+    font-size: 18px;
+    text-decoration: underline;
+    margin-bottom: 15px;
+    color: #6E9299;
+    font-weight: bold;
+}
+
+.network_entry { /*STYLES EACH NETWORK ENTRY IN THE NETWORKS INFORMATION BOX*/
+    width: 400px;
+    text-align: left;
+    padding: 2px 0px 5px 100px; /*DON'T MESS WITH THIS PADDING UNLESS YOU KNOW WHAT YOU ARE DOING OR THE NETWORK LIST COULD RUN OUTSIDE OF THE CONTAINING DIV WHEN MULTIPLE NETWORKS ARE ADDED.*/
+    color: #666666;
+    font-size: 14px;
+}
+
+.network_name { /*STYLES JUST THE NETWORK NAMES IN THE NETWORKS INFORMATION BOX*/
+	color: #666666;
+    font-weight: bold;
+}
+
+#progress_bar { /*STYLES THE PROGRESS BAR IN THE NETWORKS INFORMATION BOX*/
+	position: relative; /*ALLOWS THE PROGRESS BAR TEXT TO BE ABSOLUTELY POSITIONED*/
+	width: 400px;
+	height: 20px;
+	border: 1px solid #000000;
+	margin: 0px auto 0px auto;
+	text-align: left;	
+	background-color: #FFFFFF;
+}	
+
+#progress_bar_fill { /*FIXES PROGRESS BAR ANIMATION BUG. DON'T TOUCH.*/
+	width: 0px;
+}
+
+.progress_bar_fill { /*STYLES THE COLORED BAR THAT FILLS IN THE PROGRESS BAR IN THE NETWORKS INFORMATION BOX*/
+	width: 0px; 
+	height: 20px;
+	font-weight: normal;
+	/*IF YOU WANT TO CHANGE THE COLOR/GRADIENT OF THE PROGRESS BAR, GO TO http://www.colorzilla.com/gradient-editor/ AND CHOOSE THE GRADIENT YOU WANT. MAKE SURE YOU ENABLE IE9 SUPPORT, THEN COPY THE CODE AND REPLACE THE CODE BELOW THIS LINE WITH THE NEW CODE*/
+	background: #b2d5f7; /* Old browsers */
+	background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pgo8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDEgMSIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJncmFkLXVjZ2ctZ2VuZXJhdGVkIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIwJSIgeTI9IjEwMCUiPgogICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2IyZDVmNyIgc3RvcC1vcGFjaXR5PSIxIi8+CiAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iI2ZmZmZmZiIgc3RvcC1vcGFjaXR5PSIxIi8+CiAgICA8c3RvcCBvZmZzZXQ9IjUxJSIgc3RvcC1jb2xvcj0iI2ZmZmZmZiIgc3RvcC1vcGFjaXR5PSIxIi8+CiAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM2N2I5ZjciIHN0b3Atb3BhY2l0eT0iMSIvPgogIDwvbGluZWFyR3JhZGllbnQ+CiAgPHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSIgZmlsbD0idXJsKCNncmFkLXVjZ2ctZ2VuZXJhdGVkKSIgLz4KPC9zdmc+);
+	background: -moz-linear-gradient(top,  #b2d5f7 0%, #ffffff 50%, #ffffff 51%, #67b9f7 100%); /* FF3.6+ */
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#b2d5f7), color-stop(50%,#ffffff), color-stop(51%,#ffffff), color-stop(100%,#67b9f7)); /* Chrome,Safari4+ */
+	background: -webkit-linear-gradient(top,  #b2d5f7 0%,#ffffff 50%,#ffffff 51%,#67b9f7 100%); /* Chrome10+,Safari5.1+ */
+	background: -o-linear-gradient(top,  #b2d5f7 0%,#ffffff 50%,#ffffff 51%,#67b9f7 100%); /* Opera 11.10+ */
+	background: -ms-linear-gradient(top,  #b2d5f7 0%,#ffffff 50%,#ffffff 51%,#67b9f7 100%); /* IE10+ */
+	background: linear-gradient(to bottom,  #b2d5f7 0%,#ffffff 50%,#ffffff 51%,#67b9f7 100%); /* W3C */
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#b2d5f7', endColorstr='#67b9f7',GradientType=0 ); /* IE6-8 */
+	/*PASTE PROGRESS BAR GRADIENT CODE ABOVE THIS LINE*/
+}
+
+.progress_bar_fill_over { /*STYLES THE COLORED BAR THAT FILLS IN THE PROGRESS BAR WHEN THE NUMBER OF AVAILABLE ADDRESSES HAS BEEN EXCEEDED IN THE NETWORKS INFORMATION BOX*/
+	width: 0px; 
+	height: 20px;
+	background-color: #FF4C4C;
+	font-weight: bold;	
+}
+
+#progress_bar_text { /*STYLES THE PROGRESS BAR TEXT IN THE NETWORKS INFORMATION BOX*/
+	position:absolute;
+	top: 0px;
+	left: 0px;
+	padding-top: 2px;
+	width: 400px; 
+	height: 20px;
+	color: #000000;	
+	text-align: center;
+	font-size: 12px;
+	z-index: 10;
+}	
+
+#network_note { /*STYLES THE TEXT UNDER THE PROGRESS BAR THAT GIVES INFORMATION ABOUT ADDRESSING*/
+	margin: 3px 0px 15px 0px;
+	color: #777777;
+	font-size: 10px;	
+}
+
+.network_remove { /*STYLES THE X NEXT TO EACH NETWORK THAT ALLOWS YOU TO REMOVE IT*/
+	color: #FF0000;
+	font-weight: bold;
+	font-size: 12px;	
+}	
+
+
+#results { /*STYLES BOX THAT HOLDS THE VLSM RESULTS WHEN FANCY RESULTS IS TURNED OFF*/
+    background-color: #F2F9FF; /*THIS WILL BE THE BACKGROUND COLOR OF THE HEADER AND EACH EVEN-NUMBERED RESULT. TO EDIT THE BACKGROUND COLOR OF EACH ODD-NUMBERED RESULT, SEE THE NOTE BELOW IN THE "results_row" SECTION*/
+    border: 2px solid #CCCCCC;
+    color: #000099;
+    height: 0;
+    margin: 30px auto;
+    opacity: 0;
+    padding: 0 0 20px;
+    width: 800px;
+}
+
+#results_fancy { /*STYLES BOX THAT HOLDS THE VLSM RESULTS WHEN FANCY RESULTS IS TURNED ON*/
+    position: absolute;
+	margin: auto;
+	left: 0;
+	right: 0;
+	top: 50px;
+	background-color: #F2F9FF; /*THIS WILL BE THE BACKGROUND COLOR OF THE HEADER AND EACH EVEN-NUMBERED RESULT. TO EDIT THE BACKGROUND COLOR OF EACH ODD-NUMBERED RESULT, SEE THE NOTE BELOW IN THE "results_row" SECTION*/
+    border: 2px solid #CCCCCC;
+    color: #000099;
+    height: auto;
+    opacity: 0; /*HIDE BY DEFAULT*/
+    padding: 0 0 20px;
+    width: 800px;
+	z-index: 1000;
+}
+
+.results_row { /*STYLES EACH FULL ROW IN THE VLSM RESULTS*/
+    width: 100%;
+	/*IF YOU WANT TO CHANGE THE BACKGROUND COLOR OF THE ALTERNATE ROWS (ODD-NUMBERED ROWS), YOU MUST DO SO IN THE JAVASCRIPT CODE. LOOK FOR THE "updateResults" FUNCTION IN THE CODE, YOU WILL SEE WHERE IT SETS THE BACKGROUND COLOR FOR ALTERNATING ROWS*/
+}
+
+#results_field_header_row { /*STYLES THE ROW THAT CONTAINS THE FIELD HEADINGS IN THE VLSM RESULTS*/
+    background-color: #F7F7F7;
+	width: 100%;
+	border-bottom: 1px solid #DDDDDD;
+	color: #0059B3;
+}
+
+#results_field_header_row div { /*GLOBAL STYLES FOR EACH FIELD IN THE FIELD HEADINGS ROW OF THE VLSM RESULTS*/
+	display: inline-block;
+    padding: 5px;
+}
+
+.results_field_1 { /*STYLES JUST THE FIRST FIELD IN EACH ROW OF THE VLSM RESULTS*/
+	width: 37%;
+	display: inline-block;
+    padding: 5px;
+}
+
+.results_field_2 { /*STYLES JUST THE SECOND FIELD IN EACH ROW OF THE VLSM RESULTS*/
+	width: 15%;
+	display: inline-block;
+    padding: 5px;
+}
+
+.results_field_3 { /*STYLES JUST THE THIRD FIELD IN EACH ROW OF THE VLSM RESULTS*/
+	width: 37%;
+	display: inline-block;
+    padding: 5px;
+}
+
+.results_field_4 { /*STYLES JUST THE FOURTH FIELD (THE PLUS/MINUS SIGN) IN EACH ROW OF THE VLSM RESULTS*/
+	width: 6%;
+	color: #FF0000;
+    font-weight: bold;
+    font-size: 18px;
+	cursor: pointer;
+	display: inline-block;
+    padding: 5px;
+}
+
+
+#results_header { /*STYLES THE HEADER TEXT IN THE VLSM RESULTS BOX*/
+    font-size: 22px;
+    font-weight: bold;
+    margin: 10px 0px 5px 0px;
+    color: #0059B3;
+	position: relative; /*APPLY POSITION ATTRIBUTE SO THAT THE CLOSE BUTTON (X) CAN BE ABSOLUTELY POSITIONED INSIDE THE HEADER*/
+}
+
+#results_close_button { /*STYLE THE CLOSED BUTTON IN THE TOP-RIGHT CORNER OF THE RESULTS BOX. (ONLY APPLICABLE IF FANCY RESULTS IS TURNED ON)*/
+	position: absolute;
+	font-size: 16px;
+    color: black;
+    left: 785px;
+    top: -10px;
+	cursor: pointer;
+}
+
+#results_subheader { /*STYLES THE HEADER TEXT IN THE VLSM RESULTS BOX*/
+    font-size: 13px;
+    margin: 5px 0px 13px 0px;
+    color: #006CD9;
+}
+
+.net_details_box { /*STYLES THE CONTAINING BOX FOR THE DETAILS OF EACH NETWORK IN THE VLSM RESULTS BOX*/
+    border: 1px solid #99E5FF;
+    width: 400px;
+	height: 165px;
+    margin: 10px auto 0px auto;
+    font-size: 13px;
+	color: #FFFFFF;
+	background: #122887; /* Old browsers */
+	/* IE9 SVG, needs conditional override of 'filter' to 'none' */
+	background: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pgo8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgdmlld0JveD0iMCAwIDEgMSIgcHJlc2VydmVBc3BlY3RSYXRpbz0ibm9uZSI+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJncmFkLXVjZ2ctZ2VuZXJhdGVkIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIwJSIgeTI9IjEwMCUiPgogICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzEyMjg4NyIgc3RvcC1vcGFjaXR5PSIxIi8+CiAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMDRkZDMiIHN0b3Atb3BhY2l0eT0iMSIvPgogIDwvbGluZWFyR3JhZGllbnQ+CiAgPHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSIgZmlsbD0idXJsKCNncmFkLXVjZ2ctZ2VuZXJhdGVkKSIgLz4KPC9zdmc+);
+	background: -moz-linear-gradient(top, #122887 0%, #004dd3 100%); /* FF3.6+ */
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#122887), color-stop(100%,#004dd3)); /* Chrome,Safari4+ */
+	background: -webkit-linear-gradient(top, #122887 0%,#004dd3 100%); /* Chrome10+,Safari5.1+ */
+	background: -o-linear-gradient(top, #122887 0%,#004dd3 100%); /* Opera 11.10+ */
+	background: -ms-linear-gradient(top, #122887 0%,#004dd3 100%); /* IE10+ */
+	background: linear-gradient(to bottom, #122887 0%,#004dd3 100%); /* W3C */
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#122887', endColorstr='#004dd3',GradientType=0 ); /* IE6-8 */	
+}
+
+.net_details_header { /*STYLES THE HEADER IN THE NETWORK DETAILS BOX IN THE VLSM RESULTS BOX*/
+	font-weight: bold;
+    padding: 5px 0 10px 0;
+    font-size: 15px;
+	color: #FFFFFF;
+}
+
+.net_details_row { /*STYLES EACH ROW IN THE NETWORK DETAILS BOX IN THE VLSM RESULTS BOX*/
+    text-align: left;
+    padding-left: 82px;
+}
+
+.net_details_label { /*STYLES EACH LABEL FOR EACH ROW IN THE NETWORK DETAILS BOX IN THE VLSM RESULTS BOX*/
+    font-weight: bold;
+    color: #FFFFBF;
+}
+
+#lightbox_background { /*CREATES TRANPARENT DARK BACKGROUND FOR LIGHTBOX EFFECT ON THE CALCULATION RESULTS WINDOW. THIS IS ONLY USED IF THE FANCY RESULTS MODE IS TURNED ON IN THE OPTIONS.*/
+	display: none; /*HIDE BY DEFAULT*/
+	position: fixed;
+	min-width: 100%;
+	min-height: 100%;
+	top: 0;
+	left:0;
+	background-color: #000000;
+	-moz-opacity: 0.8;
+    opacity:.80;
+    filter: alpha(opacity=80);
+	z-index: 500;
+}

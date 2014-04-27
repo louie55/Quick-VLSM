@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Quick-VLSM: A Variable-Length Subnet Masking Calculator</title>
+
+<!--
+                         *** VLSM CALCULATOR v2.0 ***
+						 
+This is version 2.0! Released a full 10 YEARS after the first version! I have a lot more coding knowledge than I did then
+and also web coding has changed a lot since then with widespread use of AJAX and CSS now the dominant technologies of web design.
+Looking over my old code for this calculator (I hadn't looked at it in years), I was almost in shock at how inefficient and
+drawn out the code was. I was really just starting out in coding back then and didn't know much about how to streamline and minimize
+my code. For example, in my old code, I was converting decimal to binary manually 1 bit at a time with long drawn-out code. Now
+I do it in one line with the toString() method. 
+
+Here are the main changes in 2.0:
+-Completely Rewrote most of the code to be MUCH more efficient than the old code.
+-Now uses HTML5/CSS3 compliant code which brings it more up-to-date than the old coding methods I used before.
+-Calculator now runs on a single page instead of 2 separate pages making it easier to implement.
+-Uses AJAX-style code to write the results on the fly onto the same page without having to reload the page.
+-Moved all styling into the quick-vlsm.css stylesheet file to make styling the page to match any website much easier.
+
+
+Note that it has not been thoroughly tested in a production environment and I am not responsible
+for any problems in your network if you use this calculator. The test problems
+that I have run through the calculator have been calculated correctly
+but I have not tested the calculator with every possible combination of
+masks and network sizes. You may use and distribute this calculator freely,
+however, please do not advertise it as anyone else's work but my own, Louis Chanady.
+If you have any questions or comments or you find a bug in the program,
+please e-mail me at lchanady@gmail.com with the subject "VLSM Calculator".
+
+If you are trying to interpret the code, I suggest you look at it in a program that
+will provide JavaScript/HTML code syntax highlighting such as Notepad++. It will
+make it a lot easier to read. I have tried to comment the code as best as I can.
+
+
+TODO LIST
+
+1. PRINTABLE RESULTS
+2. NICER LOOKING ERROR BOXES
+3. ABILITY TO COMPLETELY CLEAR ALL NETWORKS AND ADDRESS BLOCK WITH ONE CLICK
+4. ABILITY TO CREATE A BOOKMARK URL THAT WILL INSTANTLY OPEN A SET OF CALCULATION RESULTS
+						 
+-->
+
+<link rel="stylesheet" type="text/css" href="quick-vlsm.css">
+
+<!--[if gte IE 9]>
+  <style type="text/css">
+    .gradient {
+       filter: none;
+    }
+  </style>
+<![endif]-->
+
+<!--THE LINE BELOW IMPORTS THE JQUERY JAVASCRIPT LIBRARY. THERE MUST BE A JQUERY JAVASCRIPT FILE IN THE SAME FOLDER AS THIS PAGE AND WITH THE SAME NAME AS LISTED IN THE LINE BELOW. IF YOU MOVE OR RENAME THE JQUERY JS FILE, YOU WILL HAVE TO UPDATE THE LINE BELOW.-->
+<script src="jquery-1.11.0.min.js"></script>
+
+<script>
+//Most of the code for version 2.0+ will be function based, so there will be many functions.
+
+//***************************CONFIGURABLE OPTION*************************
+//The following option determines whether you want the calculation results to display
+//inline with the content at the bottom of the page (non-fancy) or if you want the results
+//to display with a lightbox-type effect and pop-up in the center of the page (fancy).
+//
+//To turn fancy results ON, set to true (default setting)
+//To turn fancy results OFF, set to false
+var fancyResults = true;
+//***********************************************************************
+
+
+
+//Check for JQuery. This calculator requires JQuery for the user interface.
+//If you are getting an error about not having JQuery loaded, make sure that the JQuery js file is in the same folder as this document on your website.
+if(!window.jQuery){
+	alert("WARNING: JQuery is not loaded!\n\nThis calculator should have come with a JQuery JS file and it should be placed in the same directory as this page.\n\nWithout it, this calculator is not functional.");
+}
+
+//Set up things after the document is loaded
+$( document ).ready(function() {
+	//MOST OF THE BELOW OPERATIONS BIND EVENTS TO PAGE ELEMENTS
+	
+	$("#cidr").blur(function(){
+		updateCIDR();
+	});
+	
+	$("#netname").focus(function(){
+		if(!maskBits || maskBits <= 0){
+			updateCIDR();
+		}
+	});
+	
+	$("#net").focus(function(){
+		if(!maskBits || maskBits <= 0){
+			updateCIDR();
+		}
+	});
+	
+	$("#calculate").click(function(){
+		calculateVLSM();
+	});
+	
+	$("#addbutton").click(function(){
+		addNet();
+	});
+	
+	//Map enter key to the address block box
+	$("#cidr").bind('keypress', function(e){
+		if(e.which === 13) { // return
+		updateCIDR();
+		$("#netname").focus();
+    }
+	});
+	
+	//Map enter key to the add network box
+	$("#net").bind('keypress', function(e){
+		if(e.which === 13) { // return
+		$('#addbutton').trigger('click');
+    }
+	});
+	
+	//Hide Fancy Results when clicked outside
+	$(document).mouseup(function (e){
+		var container = $(".results");
+
+		if (!container.is(e.target) // if the target of the click isn't the container...
+			&& container.has(e.target).length === 0) // ... nor a descendant of the container
+		{
+			$(".results").css("opacity",0);
+			$("#lightbox_background").hide(500);
+		}
+	});
+});
+
+//Used for padding strings
+String.prototype.padLeft = function(l,c) {return Array(l-this.length+1).join(c||" ")+this}
+
+//Used for clearing arrays
+Array.prototype.clear = function() {
+  while (this.length > 0) {
+    this.pop();
+  }
+};
+
+//Creates Error Messages
+function throw_error(text){
+	alert("ERROR: " + text);
+}
+
+//Test to see if a value is a number
+function isNumber(n) {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+}
+
+//Creates a percentage from the 2 numbers passed (rounded to nearest integer). It will return what percentage of b a is
+function getPercent(a,b){
+	return Math.round((a / b) * 100);
+}
+
+//Put the cursor focus back onto the CIDR box and style it when there is an error
+function cidrError(){
+	var box = document.getElementById("cidr");
+	setTimeout(function(){box.focus()},1);
+	box.className = "box_style_error";
+}
+
+//Put the cursor focus back onto the Network box and style it when there is an error
+function netError(){
+	var box = document.getElementById("net");
+	setTimeout(function(){box.focus()},1);
+	box.className = "box_style_error";
+}
+
+//Validates the entered IP block and mask
+function validateCIDR(text)   
+{  
+	var box = document.getElementById("cidr");
+	
+	//Make sure something was entered
+	if(box.value.trim() == ""){
+		throw_error("You must enter an IP Address & Mask. You entered nothing.");
+		cidrError();
+		return false;
+	}
+	
+	var val = text.split("/"); //Split IP Address From Mask
+	
+	//Make sure only 1 slash "/" exists.
+	if(val.length != 2){
+		throw_error("You either didn't enter a subnet mask or you entered it incorrectly. Also, make sure you use a forward slash '/'.");
+		cidrError();
+		return false;
+	}
+	
+	//Make sure Mask is between 1 and 32
+	if(val[1] > 32 || val[1] < 1){
+		throw_error("You have entered an invalid mask number. It must be a number from 1 to 32.");
+		cidrError();
+		return false;
+	}
+	
+	//Validate IP Address
+	ip = val[0].split(".");
+	
+	//Make sure IP address has 4 values separated by 3 dots
+	if(ip.length != 4){
+		throw_error("Your IP address is invalid. It must be in the format X.X.X.X");
+		cidrError();
+		return false;
+	}
+	
+	//Make sure IP address values are positive integers between 0 and 255
+	for(c = 0; c < ip.length; c++){
+		//Perform Test
+		if(ip[c] <= -1 || ip[c] > 255 || !isNumber(ip[c]) || ip[c].indexOf(" ") !== -1){
+			throw_error("Your IP address value "+ip[c]+" is invalid. All values must be a positive number from 0 to 255 and must not contain spaces.");
+			cidrError();
+			return false;
+		}
+		//Don't allow numbers with zero padding (i.e. 05 or 026 or 000128) as they will pass the above tests
+		var numArr = ip[c].split("");
+		if(numArr[0] == 0 && numArr.length > 1){
+			throw_error("Your IP address value "+ip[c]+" is invalid. Please do not pad numbers with leading zeros.");
+			cidrError();
+			return false;
+		}	
+	}
+	
+	
+	//If all is good, style the text box
+	box.className = "box_style_good";
+	return true;
+	
+}
+
+//Calculates a full subnet mask from a number of bits (Example: 24 = 255.255.255.0) 
+function getFullMask(m){
+	//Get the number of full bytes (which will be 255)
+	var fullBytes = Math.floor(m/8);
+	//Get the number of leftover bits after the above statement
+	var leftOvers = m%8;
+	
+	//Build an array containing each of the 4 numbers of the mask
+	var mask = new Array();
+	var control = 0;
+	for(var c = 0; c < 4; c++){
+		if(c < fullBytes){
+			mask[c] = 255;
+		}
+		else{
+			//Build Binary String of the next number
+			mask[c] = "";
+			for(var n = 1; n < 9; n++){
+				if(n <= leftOvers && control == 0){
+					mask[c] += "1";	
+				}
+				else{
+					mask[c] += "0";
+				}
+			}
+			//Convert Binary to Decimal
+			mask[c] = parseInt(mask[c], 2);
+			control = 1;
+		}
+	}
+	return mask.join(".");
+}
+
+//Inverts a binary number (i.e 11010 to 00101). Accepts only a binary string. Returns the same number of bits as were received.
+function invertBinary(num){
+	//The statement below converts the string to a number, then XORs it with a string of 1s (converted to a number) the same length as the string we are inverting.
+	//We then add it to a binary string of 32 0s to make it a 32-bit number.
+	//It then converts it back to a binary string and cuts off the number of bits from the end that we started with and returns it.
+	return ('00000000000000000000000000000000' + (parseInt(num,2) ^ parseInt("".padLeft(num.length,"1"),2)).toString(2)).slice(-num.length);	
+}
+
+//Will convert a dot-decimal address or mask into a number.
+//NOTE: This function returns a number. NOT a binary string. You will have to convert it to a string if you want to display the binary equivialent.
+//Binary numbers don't exist in JavaScript, so they are usually converted to DECIMAL or HEXADECIMAL form for calculations and bitwise operations.
+//That is why all binary numbers are strings in JavaScript.
+function address2Num(address){
+	//We will perform no validation because the address being passed should have already been validated in previous operations
+	var a = address.split(".");
+	var r = parseInt(a[0]).toString(2).padLeft(8,"0");
+	r += parseInt(a[1]).toString(2).padLeft(8,"0");
+	r += parseInt(a[2]).toString(2).padLeft(8,"0");
+	r += parseInt(a[3]).toString(2).padLeft(8,"0");
+	//We now have a 32-bit binary string. It is then converted to a number and returned.
+	return parseInt(r,2);
+}
+
+//Will convert a number to a dot-decimal address. Returns a string in dot-decimal format (i.e. 192.168.3.0)
+function num2Address(num){
+	//First, make sure the number is 32-bits long
+	num = num.toString(2).padLeft(32,"0");
+	//Now split it into 8-bit chunks, convert to decimal, and join together
+	return new Array(parseInt(num.substr(0,8),2) ,parseInt(num.substr(8,8),2) ,parseInt(num.substr(16,8),2) ,parseInt(num.substr(24,8),2) ).join(".");
+}
+
+
+
+//Given an IP address and Full Mask, it will return the network address. It will return it as an array of 2 different values.
+//The first value will be number representation of the network address.
+//The second will be a string with the network address in dot-decimal format (i.e. 192.168.3.0)
+function getNetAddress(ip,mask){
+	//Gets the network address by ANDing the ip address and the mask. Then the >>> 0 makes sure the result is interpreted as an unsigned 32-bit binary value.
+	n = (address2Num(ip) & address2Num(mask)) >>> 0;
+	return new Array( n, num2Address(n));
+}
+
+
+//Calculates number of addresses in a block using the given subnet mask or number of mask bits. Accepts full subnet mask (i.e. 255.255.255.0) or a bit count (i.e. 24)
+function getAddressCount(mask){
+	if(mask == 32 || mask == "255.255.255.255"){ //Make sure the function returns zero if the mask is 32 bits long
+		return 0;
+	}
+	//First check to see if this is a subnet mask or a number of bits
+	if(mask.split(".").length == 4){ //This is a full subnet mask
+		var m = mask.split(".");
+		var mArr = new Array();
+		//Convert each part of the mask to binary
+		for(var c = 0; c < 4; c++){
+			mArr[c] = parseInt(m[c]).toString(2).padLeft(8,"0");
+		}
+		//Finally see how many zeros are on the end of the binary 32-bit mask and calculate the address count
+		return Math.pow(2,mArr.join("").split("0").length-1);
+	}
+	else{ //This is a bit count
+		//Return value
+		return Math.pow(2,32-mask);
+	}
+}
+
+//Calculates what class an address belongs to. Excepts only a v4 IP Address in Dot-Decimal format (192.168.2.3)
+function getClass(a){
+	var arr = a.split(".");
+	var bin = parseInt(arr[0]).toString(2).padLeft(8,"0"); //Create 8-Bit Binary String
+	if(bin.substr(0,1) == "0"){return "A";}
+	if(bin.substr(0,2) == "10"){return "B";}
+	if(bin.substr(0,3) == "110"){return "C";}
+	if(bin.substr(0,4) == "1110"){return "D";}
+	if(bin.substr(0,4) == "1111"){return "E";}
+}
+
+//Changes the content of the cidr_info DIV dynamically when called.
+//Create Global variables to hold the mask bits and the ip address.
+//These variables will be set in the updateCIDR function.
+var maskBits = 0; //Holds the numeric form (number of bits) of the address block's mask.
+var fullMask = ""; //Holds the dot-decimal form of the address block's mask.
+var ip = ""; //This holds the ip address entered in the CIDR block. This is only different than the below address (netAddress) if the address entered has 1 bits that extend beyond the mask.
+var netAddress = ""; //This holds the base address of the address block.
+function updateCIDR(){
+	//Get the value entered into the CIDR text box (IP Address/Mask)
+	var content = $("#cidr").val();
+	//Create a variable for the div that displays the Address Block information
+	var $cidrDisplayBox = $("#cidr_info");
+	
+	//Validate the content before displaying details. If invalid, display error instead.
+	if(validateCIDR(content)){ //If the IP Address & Mask are validated, compute and display the information textbox.
+		//Clear any values and styles in the box before continuing in case the user decides to change the address block.
+		$cidrDisplayBox.html("");
+		$cidrDisplayBox.removeAttr("style");
+		
+		//Put Values into variables
+		var values = content.split("/");
+		ip = values[0];
+		maskBits = values[1];
+		
+		//Get the full subnet mask
+		fullMask = getFullMask(maskBits);
+		
+		//Get the actual network address in case the address entered in the CIDR box contains bits that extend beyond the mask (i.e. 192.168.0.25/24)
+		netAddress = getNetAddress(ip,fullMask)[1];
+		
+		//Build the output for the Address Block information box
+		var $cidrHeader = $("<div id=\"cidr_info_header\">Information For Address Block <span id='cidr_info_header_block'>" + content + "</span></div>");
+		$cidrHeader.appendTo("#cidr_info");	
+
+		var $cidrList = $("<ul id=\"cidr_info_ul\"></ul>");
+		$("<li><span class=\"list_title\">Network Address:</span> "+ netAddress +"</li>").appendTo($cidrList);
+		$("<li><span class=\"list_title\">Mask:</span> "+ fullMask +" ("+ maskBits +" Bits)</li>").appendTo($cidrList);
+		$("<li><span class=\"list_title\">Number of Addresses in Block:</span> "+ getAddressCount(maskBits).toLocaleString() +"</li>").appendTo($cidrList);
+		$("<li><span class=\"list_title\">Address Class:</span> "+ getClass(ip) +"</li>").appendTo($cidrList);
+		$cidrList.appendTo("#cidr_info");
+		
+		//Show the output
+		$cidrDisplayBox.animate({ opacity: 1, height: "110px" }, 800);
+	}
+	else{ //If the entered IP/Mask is invalid
+		cidrDisplayBox.style.display = "none";
+	}
+	
+	//Updates the networks box if it is active
+	if(networks.length > 0){
+		updateNets();
+	}
+	
+	
+}
+
+//Will Add A Network to the list of Networks for VLSM. Does not take any parameters. It gets it's value from the form elements.
+var networks = new Array(); //Create a global array containing all networks that have been added.
+var totalHosts = 0; //Create global array for determining the number of hosts needed for all the added networks.
+var availableAddresses = 0; //Create a global array showing how many addresses are in the entered address block.
+var netBoxCtrl = 0; //Control Variable. If zero, the network display box will animate and appear after the next network is added. If one, the box will stay visible on the page.
+var netNum = 0; //Keeps track of how many networks there are currently. This is simply for styling and effects so that the fade-in effects look better.
+var netFlag = 0; //Keeps track of when the first run of updateNets is.
+var overLimit = 0; //Will be 1 if you have entered more addresses than you have in your block.
+
+//Update the displaying of currently entered networks
+function updateNets(){
+	//Hide the networks display box if there are no networks left
+	if(networks.length <= 0){
+		$("#networks").animate({ opacity: 0, height: "0px" }, 1200);
+		$("#networks").removeAttr("style");
+		netBoxCtrl = 0;
+		return false;
+	}
+	
+	//Hide the calculation results if they are shown. It makes sense to hide the results if the networks are changed since they will no longer be validateCIDR
+	$("#results").animate({ opacity: 0}, 1).css("height", 0);
+	//Change button text to "Re-Calculate"
+	$("#calculate").attr("value","Calculate");
+	
+	//Clear all current network entries
+	$("#network_entries").html("");
+	
+	//Create elements if this is the first time run
+	if(netFlag == 0){
+		//Add Header
+		$("<div id=\"networks_header\">NETWORKS</div>").appendTo($("#networks"));
+		//Add Progress Bar
+		$("<div id=\"progress_bar\"><div class=\"gradient\" id=\"progress_bar_fill\" class=\"progress_bar_fill\">&nbsp;</div><div id=\"progress_bar_text\">&nbsp;</div></div>").appendTo($("#networks"));
+		//Add addressing note
+		$("<div id=\"network_note\"></div>").appendTo($("#networks"));
+		//Add Placeholder for network entries
+		$("<div id=\"network_entries\"></div>").appendTo($("#networks"));
+	}
+	
+	var l = networks.length;
+	var h = 25 * l + 100;
+	for(var c = 0; c < l; c++){
+		var name = networks[c][1].trim() == "" ? "(No Name)" : networks[c][1].trim();
+		if(c < netNum){ //Determines whether the entry is new and should fade-in
+			$("<div class=\"network_entry\" id=\"netentry" +c+ "\"><span class=\"network_name\">" +name+ ":</span> " +networks[c][2].toLocaleString()+ " Hosts <span title=\"Remove This Network\" class=\"network_remove\" data-id=\"" +networks[c][0]+ "\">X</span></div>").appendTo($("#network_entries"));
+		}
+		else{
+			$("<div class=\"network_entry\" id=\"netentry" +c+ "\"><span class=\"network_name\">" +name+ ":</span> " +networks[c][2].toLocaleString()+ " Hosts <span title=\"Remove This Network\" class=\"network_remove\" data-id=\"" +networks[c][0]+ "\">X</span></div>").hide().appendTo($("#network_entries")).fadeIn(1000);
+		}
+		//Color the background of each network alternately
+		if(!(c % 2)){
+			$("#netentry" + c).css("background-color","#FCFCFC");
+		}
+		//Set the click event & cursor for the remove button
+		$("span[data-id|='" +networks[c][0]+ "']").click(function(){
+			removeNet($(this).attr("data-id"));
+		});
+		$("span[data-id]").css("cursor","pointer");
+	}
+	
+	//Show the output if this is the first network added
+	if(netBoxCtrl == 0){
+		$("#networks").animate({ opacity: 1, height: "120px" }, 1200);
+	}
+	else{
+		$("#networks").animate({height: h+"px" }, 800);
+	}
+	
+	//Update the progress bar
+	availableAddresses = getAddressCount(maskBits);
+	$("#progress_bar_text").html("Using " +totalHosts.toLocaleString()+ " out of " +availableAddresses.toLocaleString()+ " Addresses (" +Math.round((totalHosts/availableAddresses)*100)+ "%)<span id=\"progress_text_suffix\">*</span>");
+	var w = 400; //This number should equal the width of the "progress_bar" div
+	var cW = Math.floor((totalHosts / availableAddresses) * w); //This calculates how full the progress bar should be.
+	var newWidth = cW > w ? w : cW; //This determines the width of the progress bar fill. Not letting it go over 100%.
+	$("#progress_bar_fill").animate({width: newWidth + "px"}, 1000);
+	if(cW > w){ //Changes the progress bar if you are over your address limit
+		$("#progress_bar_fill").attr("class","progress_bar_fill_over");
+		$("#progress_text_suffix").html("!");
+		//Change network note
+		$("#network_note").html("You have exceeded the number of addresses in your block!").css("color", "#FF4C4C");
+		overLimit = 1;
+		
+	}
+	else{  //Not over the address limit
+		//Display network note
+		$("#network_note").html("*The actual number of usable addresses will be less").css("color", "#777777");
+		//Make sure progress bar is styled correctly in case the number of addresses was exceeded previously
+		$("#progress_bar_fill").attr("class","progress_bar_fill");
+		$("#progress_text_suffix").html("*");
+		//$("#progress_bar_text").css("font-weight","normal");
+		overLimit = 0;
+	}
+	
+	netBoxCtrl = 1;
+	netNum = l;
+	netFlag = 1;
+	
+}
+
+function addNet(){
+	//Before adding networks, make sure an address block/mask has been entered
+	if($("#cidr").val().trim() == ""){
+		throw_error("You really should enter an IP Address Block & Mask before adding networks.");
+		cidrError();
+		return false;
+	}
+	
+	//Get the number entered
+	var n = Number($("#net").val());
+	
+	//Make sure value entered is a number, is positive, and an integer
+	if(n == 0){
+		throw_error("You must enter a number of hosts for the network (must be greater than 1).");
+		netError();
+		return false;
+	}
+	if(n == 1){
+		throw_error("You must enter a number greater than 1. Every network needs to use at least 2 host addresses or it isn't really a network, right?");
+		netError();
+		return false;
+	}
+	if(!isNumber(n) || n < 0){
+		throw_error("You must enter a positive integer for the number of hosts in the network.");
+		netError();
+		return false;
+	}
+	if(n % 1 != 0){
+		throw_error("You must enter an integer for the number of hosts in the network. You can not have decimal points.");
+		netError();
+		return false;
+	}
+	
+	//Generate Random number for network ID. An ID is used to make deleting a certain network from the list easier.
+	var id = Math.floor((Math.random()*100000)+1);
+	//Create array for the values of this network
+	//Value order is [id,name,hosts]
+	var thisNet = [id,$("#netname").val().substr(0,30),n];
+	
+	//Add this network to the global array containing the networks
+	networks.push(thisNet);
+	
+	//Add the number of hosts to the running total
+	totalHosts = totalHosts + n;
+	
+	//Remove any CSS classes placed on the network box by errors
+	$("#net").removeClass();
+	
+	//Clear values and focus for the next network
+	$("#netname").val("");
+	$("#net").val("");
+	$("#netname").focus();
+	
+	//Update Networks Display
+	updateNets();
+}
+
+//Removes a network from the global network array. Takes the network ID to be removed as a parameter.
+function removeNet(id){
+		var l = networks.length;
+		for(var c = 0; c < l; c++){
+			if(networks[c][0] == id){
+				//Remove the number of hosts from running total
+				totalHosts = totalHosts - networks[c][2];
+				//Remove the network
+				networks.splice(c,1);
+				//Update Networks Display
+				updateNets();
+				$("#netname").focus();
+				return false;
+			}
+		}
+	
+}
+
+
+//Writes the results of the VLSM to the page
+function updateResults(){
+	//Clear any values and styles in the box before continuing in case the user decides to recalculate the results.
+	$(".results").html("");
+	$(".results").removeAttr("style");
+	
+	//Create the results header
+	$("<div id=\"results_header\">Calculation Results</div>").appendTo($(".results"));
+	//Create the results sub-header which will have some info on the total number of addresses used and wasted
+	$("<div id=\"results_subheader\">Using " +usedHosts.toLocaleString()+ " addresses out of " +availableAddresses.toLocaleString()+ " (" +getPercent(usedHosts,availableAddresses)+ "%). " +wasted.toLocaleString()+ " addresses were wasted in the VLSM process. </div>").appendTo($(".results"));
+	
+	//Create the field headers
+	$("<div id=\"results_field_header_row\"><div class=\"results_field_1\">Name</div><div class=\"results_field_2\"># of Hosts</div><div class=\"results_field_3\">Network Address/Mask</div><div class=\"results_field_4\">&nbsp;</div></div>").appendTo($(".results"));
+		
+	//Loop Through Each Result in the results array and create DIVs for them
+	var l = results.length;
+	for(var c = 0; c < l; c++){
+		var name = results[c][0].trim() == "" ? "(No Name)" : results[c][0];
+		$("<div class=\"results_row\" id=\"result" +c+ "\"><div class=\"results_field_1\">" +name+ "</div><div class=\"results_field_2\">" +results[c][1].toLocaleString()+ "</div><div class=\"results_field_3\">" +results[c][2] + "/" + results[c][3] + "</div><div id=\"results_expand_" +c+ "\" class=\"results_field_4\" title=\"Click To View The Details For This Network\">+</div></div>").appendTo($(".results"));
+		//Color the background of each result alternately
+		if(!(c % 2)){
+			$("#result" + c).css("background-color","#FFFFFF");
+		}
+		//Create the network details box which will be hidden until the plus sign (+) is clicked.
+			//Calculate the first usable host address
+			var firstHost = num2Address(address2Num(results[c][2]) + 1);
+			//Calculate the broadcast address
+			var broadcast = num2Address(address2Num(results[c][2]) + (Math.pow(2,(32-results[c][3])) - 1) );
+			//Calculate the last usable host address
+			var lastHost = num2Address(address2Num(broadcast) - 1);
+			//Calculate the number of usable hosts in this network
+			var usableHosts = (Math.pow(2,(32-results[c][3]))) - 2;
+			//Calculate how many addresses were wasted on this network
+			var thisWasted = usableHosts - results[c][1];
+			//Calculate the wasted percentage
+			var wastedPercent = Math.round((thisWasted / usableHosts) * 100);
+			//Output the results
+			$("<div class=\"net_details_box\" id=\"details_box_" +c+ "\"></div>").appendTo("#result" + c);
+			$("<div class=\"net_details_header\">Network Details</div>").appendTo("#details_box_" + c);
+			$("<div class=\"net_details_row\"><span class=\"net_details_label\">Network Address:</span> " +results[c][2]+ "</div>").appendTo("#details_box_" + c);
+			$("<div class=\"net_details_row\"><span class=\"net_details_label\">Subnet Mask:</span> " +getFullMask(results[c][3])+ " (" +results[c][3]+ " Bits)</div>").appendTo("#details_box_" + c);
+			$("<div class=\"net_details_row\"><span class=\"net_details_label\"># of Usable Hosts:</span> " +usableHosts.toLocaleString()+ "</div>").appendTo("#details_box_" + c);
+			$("<div class=\"net_details_row\"><span class=\"net_details_label\"># of Hosts Wasted:</span> " +thisWasted.toLocaleString()+ " (" +wastedPercent+ "%)</div>").appendTo("#details_box_" + c);
+			$("<div class=\"net_details_row\"><span class=\"net_details_label\">First Host Address:</span> " +firstHost+ "</div>").appendTo("#details_box_" + c);
+			$("<div class=\"net_details_row\"><span class=\"net_details_label\">Last Host Address:</span> " +lastHost+ "</div>").appendTo("#details_box_" + c);
+			$("<div class=\"net_details_row\"><span class=\"net_details_label\">Broadcast Address:</span> " +broadcast+ "</div>").appendTo("#details_box_" + c);
+		//Hide it by default
+		$("#details_box_" + c).hide();
+	}
+	
+	//Set the behavior of the plus/minus signs so that they will expand/collapse the network info.
+		$(".results_field_4").each(function(index){
+			if(index > 0){ //Don't bind an event to the first field because it's in the header
+				//Set the click event
+				$(this).bind("click",function(){
+					$("#details_box_" + (index - 1)).slideToggle(600);
+					//Toggle the +/-
+					if($("#results_expand_" + (index - 1)).text() == "-"){
+						$("#results_expand_" + (index - 1)).text("+");
+						$("#results_expand_" + (index - 1)).attr("title","Click To View The Details For This Network");
+					}
+					else{
+						$("#results_expand_" + (index - 1)).text("-");
+						$("#results_expand_" + (index - 1)).attr("title","Click To Hide The Details For This Network");
+					}
+				});				
+			}
+		});
+	
+	//Unveil the results
+	if(fancyResults){
+		//Display Lightbox black background
+		$("#lightbox_background").show(200);
+		//Scroll to the top of the page
+		$("html, body").animate({ scrollTop: 0 }, "slow");
+		//Create Close Button and create click event for the close button to close the results window
+		$("<div id=\"results_close_button\" title=\"Close Results Window\">X</div>").appendTo($("#results_header"))
+		$("#results_close_button").click(function (){
+			$(".results").css("opacity",0);
+			$("#lightbox_background").hide(500);
+		});
+		//Display Results
+		$(".results").attr("id","results_fancy").animate({ opacity: 1}, 800);
+	}
+	else{
+		$(".results").animate({ opacity: 1}, 1200).css("height", "auto");
+	}
+		
+	
+	//Change button text to "Re-Calculate"
+	$("#calculate").attr("value","Re-Calculate");
+	
+}
+
+//This is it. The Flux Capacitor. This is the function that will actually calculate the VLSM.
+
+	//Creates a global variable to hold the number of hosts actually used in the process of VLSM addressing.
+	//It will be updated throughout the address processing and if it ever exceeds the amount of available addresses, an error will be thrown.
+	//It is different than the totalHosts variable in that this variable will take into account addresses wasted by VLSM as well as unusable network and broadcast addresses.
+	var usedHosts = 0;
+	
+	//Creates the global array that holds the VLSM results. This will be passed the updateVLSM function which will publish the results on the page.\
+	var results = new Array();
+	//Creates a global variable to hold the total number of addresses that were wasted by the VLSM process
+	var wasted = 0;
+function calculateVLSM(){
+	//Immediately stop execution if the amount of network hosts entered is more than the available addresses.
+	//Note that this doesn't take into account any addresses that are wasted in the addressing process or the network/broadcast addresses that aren't usable.
+	//Those things will be calculated later and appropriate error messages will be thrown if necessary.
+	if(overLimit == 1){
+		throw_error("The networks you have entered have more hosts than you address block has addresses. You must use less hosts or a bigger address block.");
+		return false;
+	}
+	
+	//Do some more validation
+	if($("#cidr").val().trim() == ""){
+		throw_error("You must enter an address block & mask first before you can calculate any VLSM.");
+		cidrError();
+		return false;
+	}	
+	if(networks.length < 1){
+		throw_error("You must enter at least one network before you can calculate any VLSM.");
+		netError();
+		return false;
+	}
+	
+	//Reset the number of used hosts and wasted hosts back to zero in case the VLSM is re-calculated
+	usedHosts = 0;
+	wasted = 0;
+	
+	//Clear the results array in case of re-calculation
+	results.clear();
+	
+	//Sort the networks array so that they are in the order of number of hosts from highest to lowest.
+	networks.sort(function sortNetworks(a,b){return b[2] - a[2]});
+	
+	//This is the main loop that will loop through every network entered and calculate the VLSM for each network.
+	//It will create an array of each network and mask that should be used. The array will also include the network name and number of hosts.
+	var addressesUsed = 0; //Will keep track of how many addresses have been used.
+	var bits = 0; //Holds the number of bits the current network in the loop needs for hosts.
+	var currentNet = netAddress; //Sets the current address that is being used in the loop. For the first time through the loop, this will be the address entered in the CIDR box. It will then be changed by the loop after each network is processed.
+	var l = networks.length;
+	for(var c = 0; c < l; c++){
+		//First thing to do is figure out how many bits the network needs for its hosts.
+		//A loop is used to calculate this
+		for(var x = 2; x < 32; x++){
+			if(networks[c][2] <= (Math.pow(2,x) - 2)){
+				bits = x;
+				usedHosts += Math.pow(2,x);
+				wasted += (Math.pow(2,x) - 2) - networks[c][2];
+				break;
+			}
+		}
+		//Set the mask bits for the network
+		var mBits = 32 - bits;
+		
+		//Add the network to the results array.
+		//Order of Array items are: [name,# of hosts,network address,mask bits]
+		results[c] = new Array(networks[c][1],networks[c][2],currentNet,mBits);
+
+		//Now we must set up for the next network.
+		//We get the next network address by adding the number of hosts used this time to the current network address
+		currentNet = num2Address(address2Num(currentNet) + Math.pow(2,bits));		
+	}
+	//Check to make sure we haven't exceeded our available addresses
+	if(usedHosts > availableAddresses){
+		throw_error("Due to the VLSM process, your needed amount of host addresses has exceeded the amount of available addresses in your address block. You will need less hosts or a larger address block.");
+		return false;
+	}
+	
+	//Display the results
+	updateResults();
+}
+
+</script>
+
+</head>
+
+<body>
+<div id="main_content_container">
+	<img src="header.png" alt="Quick-VLSM Calculator" width="441" height="41">
+
+	<div id="header_hr">&nbsp;</div> <!--Creates a Horizontal Rule that can be styled-->
+
+ 
+    <p>
+		<span class="step_label">Step 1:</span> <span class="step_text">Enter your Address Block Address and mask: (example: 205.68.64.0/20)</span>
+        
+		<!--address block/MASK TEXT BOX-->
+		&nbsp;&nbsp;&nbsp;<input type="text" id="cidr" size="19">
+    
+	</p>
+	
+	<div id="cidr_info">&nbsp;</div> <!--THIS DIV WILL BE USED TO DYNAMICALLY DISPLAY THE INFORMATION FOR THE CURRENT CIDR NETWORK BLOCK. IT WILL BE POPULATED BY JAVASCRIPT-->
+	<div id="header_hr">&nbsp;</div> <!--Creates a Horizontal Rule that can be styled-->
+    <p><span class="step_label">Step 2 (Add Networks): </span> <span class="step_text">Enter the number of addresses you will need in each network, after applying the scalability percentage.
+      <br>After entering the number for each network, click "Add Network" (or press Enter).<br>
+      You may also give each network a name (up to 30 characters long) to help identify it.</span></p>
+    <p>
+      
+	  <!--ENTER NETWORK TEXT BOXES-->
+	   Name (Optional): <input type="text" id="netname" size="30" maxlength="30">&nbsp;&nbsp;Number of Hosts: <input type="text" id="net" size="8">
+       
+	   <!--"ADD" BUTTON WHICH CALLS THE addNet() FUNCTION WHEN CLICKED USING THE onSubmit ACTION OF THE FORM-->
+	   &nbsp;<input type="button" id="addbutton" value="Add Network">
+
+	</p>
+    <div id="networks">&nbsp;</div> <!--THIS DIV WILL BE USED TO DYNAMICALLY DISPLAY THE ADDED NETWORKS FOR THE CURRENT CIDR NETWORK BLOCK. IT WILL BE POPULATED BY JAVASCRIPT-->
+    
+    <p>
+      
+	  <!--"CALCULATE!" BUTTON. CALLS THE sendInfo() FUNCTION WHEN CLICKED-->
+	  <input type="button" id="calculate" value="Calculate!">
+    
+	</p>
+	
+	<div id="results" class="results">&nbsp;</div> <!--THIS DIV WILL BE USED TO DYNAMICALLY DISPLAY THE ADDED NETWORKS FOR THE CURRENT CIDR NETWORK BLOCK. IT WILL BE POPULATED BY JAVASCRIPT-->
+ 
+  
+  <p>
+  <!--Donate Button-->
+	<form action="https://www.paypal.com/cgi-bin/webscr" method="post">
+		<font color="#009900" size="4"><strong>Did you find this tool useful? Please Donate!</strong></font><br>
+		<input type="hidden" name="cmd" value="_xclick">
+		<input type="hidden" name="business" value="lchanady@gmail.com">
+		<input type="hidden" name="item_name" value="Quick-VLSM Developer Donation">
+		<input type="hidden" name="no_note" value="1">
+		<input type="hidden" name="currency_code" value="USD">
+		<input type="hidden" name="tax" value="0">
+		<input type="hidden" name="bn" value="PP-DonationsBF">
+		<input type="image" src="https://www.paypal.com/en_US/i/btn/x-click-but04.gif" border="0" name="submit" alt="Make payments with PayPal - it's fast, free and secure!">
+		<img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1">
+	</form>
+	<!--End Donate Button-->
+  </p>
+  <font size="1" face="Verdana, Arial, Helvetica, sans-serif">Quick-VLSM Calculator Version 2.0<br>
+  Created By Louis Chanady, 2014<br>
+  <a href="mailto:lchanady@gmail.com">lchanady@gmail.com</a></font></div>
+  
+  <div id="lightbox_background">&nbsp;</div>
+  
+</div> <!--End main_content_container-->
+</body>
+</html>
